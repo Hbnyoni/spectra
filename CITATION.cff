@@ -6,10 +6,11 @@ abstract: >-
   concentration per minute, into a dwell-weighted, microenvironment-resolved
   exposure estimate for each person, day and 100 m cell.
 type: software
-version: "1.0"
+version: "1.0.0"
 date-released: "2026-10-14"
 license: GPL-3.0-or-later
 repository-code: "https://github.com/Hbnyoni/spectra"
+doi: "10.5281/zenodo.23363892"
 keywords:
   - personal exposure
   - PM2.5

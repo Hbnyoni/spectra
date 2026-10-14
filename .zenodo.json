@@ -1,6 +1,6 @@
 {
   "title": "SPECTRA: Spatiotemporal Personal Exposure Characterization and TRAjectory Analyzer",
-  "description": "<p>An R toolkit that converts a raw wearable record, one position and one concentration per minute, into a dwell-weighted, microenvironment-resolved exposure estimate for each person, day and 100 m cell. It implements trajectory quality control, capped dwell-time weighting, speed-and-building indoor/outdoor classification, and segmentation by hour, weekday, time of day, season, climate and mobility, through a command-line driver or a Shiny application.</p>",
+  "description": "<p>An R toolkit that converts a raw wearable record, one position and one concentration per minute, into a dwell-weighted, microenvironment-resolved exposure estimate for each person, day and 100 m cell. It implements trajectory quality control, capped dwell-time weighting, speed-and-building indoor/outdoor classification, and segmentation by hour, weekday, time of day, season, climate and mobility, through a command-line driver or a Shiny application.</p><p><strong>Funding.</strong> Research was primarily supported by the National Institute of Environmental Health Sciences (NIEHS) and the Office of Strategic Coordination (OSC) of the National Institutes of Health under Award Number U01ES036146-0. The HE2AT Centre is funded by the Fogarty International Center of the National Institutes of Health under Award Number U54TW012083. The PRECISE Network is funded by the UK Research and Innovation Grand Challenges Research Fund GROW Award scheme (grant number MR/P027938/1). The content is solely the responsibility of the authors and does not necessarily represent the official views of the National Institutes of Health.</p>",
   "upload_type": "software",
   "license": "GPL-3.0-or-later",
   "version": "1.0",
@@ -51,17 +51,6 @@
     {
       "name": "Govindasamy, Tamara Rosemary",
       "affiliation": "IBM Research South Africa, Johannesburg, South Africa"
-    }
-  ],
-  "grants": [
-    {
-      "id": "10.13039/100000066::U01ES036146"
-    },
-    {
-      "id": "10.13039/100000061::U54TW012083"
-    },
-    {
-      "id": "10.13039/100014013::MR/P027938/1"
     }
   ],
   "related_identifiers": [

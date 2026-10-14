@@ -16,22 +16,64 @@
     "R"
   ],
   "creators": [
-    { "name": "Nyoni, Handsome Bongani", "affiliation": "Place Alert Labs, Midlands State University, Gweru, Zimbabwe" },
-    { "name": "Sibanda, Rutendo", "affiliation": "Centre for Sexual Health and HIV/AIDS Research (CeSHHAR) Zimbabwe" },
-    { "name": "Chinwadzimba, Zororo", "affiliation": "Centre for Sexual Health and HIV/AIDS Research (CeSHHAR) Zimbabwe" },
-    { "name": "Shangwa, Tendai", "affiliation": "Place Alert Labs, Midlands State University, Gweru, Zimbabwe" },
-    { "name": "Makanga, Prestige Tatenda", "affiliation": "Place Alert Labs, Midlands State University, Gweru, Zimbabwe" },
-    { "name": "Chapunza, Anotida Marrian", "affiliation": "Place Alert Labs, Midlands State University, Gweru, Zimbabwe" },
-    { "name": "Mushore, Terence Darlington", "affiliation": "Place Alert Labs, Midlands State University, Gweru, Zimbabwe" },
-    { "name": "Govindasamy, Tamara Rosemary", "affiliation": "IBM Research South Africa, Johannesburg, South Africa" }
+    {
+      "name": "Nyoni, Handsome Bongani",
+      "affiliation": "Place Alert Labs, Midlands State University, Gweru, Zimbabwe"
+    },
+    {
+      "name": "Sibanda, Rutendo",
+      "affiliation": "Centre for Sexual Health and HIV/AIDS Research (CeSHHAR) Zimbabwe"
+    },
+    {
+      "name": "Chinwadzimba, Zororo",
+      "affiliation": "Centre for Sexual Health and HIV/AIDS Research (CeSHHAR) Zimbabwe"
+    },
+    {
+      "name": "Shangwa, Tendai",
+      "affiliation": "Place Alert Labs, Midlands State University, Gweru, Zimbabwe"
+    },
+    {
+      "name": "Makanga, Prestige Tatenda",
+      "affiliation": "Place Alert Labs, Midlands State University, Gweru, Zimbabwe"
+    },
+    {
+      "name": "Chapunza, Anotida Marrian",
+      "affiliation": "Place Alert Labs, Midlands State University, Gweru, Zimbabwe"
+    },
+    {
+      "name": "Mushore, Terence Darlington",
+      "affiliation": "Place Alert Labs, Midlands State University, Gweru, Zimbabwe"
+    },
+    {
+      "name": "Mahlasi, Craig",
+      "affiliation": "IBM Research South Africa, Johannesburg, South Africa"
+    },
+    {
+      "name": "Govindasamy, Tamara Rosemary",
+      "affiliation": "IBM Research South Africa, Johannesburg, South Africa"
+    }
   ],
   "grants": [
-    { "id": "10.13039/100000066::U01ES036146" },
-    { "id": "10.13039/100000061::U54TW012083" },
-    { "id": "10.13039/100014013::MR/P027938/1" }
+    {
+      "id": "10.13039/100000066::U01ES036146"
+    },
+    {
+      "id": "10.13039/100000061::U54TW012083"
+    },
+    {
+      "id": "10.13039/100014013::MR/P027938/1"
+    }
   ],
   "related_identifiers": [
-    { "identifier": "10.1136/bmjopen-2024-091831", "relation": "isSupplementTo", "scheme": "doi" },
-    { "identifier": "10.1007/s11869-026-02060-y", "relation": "isSupplementTo", "scheme": "doi" }
+    {
+      "identifier": "10.1136/bmjopen-2024-091831",
+      "relation": "isSupplementTo",
+      "scheme": "doi"
+    },
+    {
+      "identifier": "10.1007/s11869-026-02060-y",
+      "relation": "isSupplementTo",
+      "scheme": "doi"
+    }
   ]
 }

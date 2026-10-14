@@ -9,7 +9,7 @@ type: software
 version: "1.0"
 date-released: "2026-10-14"
 license: GPL-3.0-or-later
-repository-code: "https://github.com/hbnyoni/spectra"
+repository-code: "https://github.com/Hbnyoni/spectra"
 keywords:
   - personal exposure
   - PM2.5

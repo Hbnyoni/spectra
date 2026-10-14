@@ -1,0 +1,37 @@
+{
+  "title": "SPECTRA: Spatiotemporal Personal Exposure Characterization and TRAjectory Analyzer",
+  "description": "<p>An R toolkit that converts a raw wearable record, one position and one concentration per minute, into a dwell-weighted, microenvironment-resolved exposure estimate for each person, day and 100 m cell. It implements trajectory quality control, capped dwell-time weighting, speed-and-building indoor/outdoor classification, and segmentation by hour, weekday, time of day, season, climate and mobility, through a command-line driver or a Shiny application.</p>",
+  "upload_type": "software",
+  "license": "GPL-3.0-or-later",
+  "version": "1.0",
+  "language": "eng",
+  "access_right": "open",
+  "keywords": [
+    "personal exposure",
+    "PM2.5",
+    "trajectory segmentation",
+    "dwell-time weighting",
+    "building footprints",
+    "exposure assessment",
+    "R"
+  ],
+  "creators": [
+    { "name": "Nyoni, Handsome Bongani", "affiliation": "Place Alert Labs, Midlands State University, Gweru, Zimbabwe" },
+    { "name": "Sibanda, Rutendo", "affiliation": "Centre for Sexual Health and HIV/AIDS Research (CeSHHAR) Zimbabwe" },
+    { "name": "Chinwadzimba, Zororo", "affiliation": "Centre for Sexual Health and HIV/AIDS Research (CeSHHAR) Zimbabwe" },
+    { "name": "Shangwa, Tendai", "affiliation": "Place Alert Labs, Midlands State University, Gweru, Zimbabwe" },
+    { "name": "Makanga, Prestige Tatenda", "affiliation": "Place Alert Labs, Midlands State University, Gweru, Zimbabwe" },
+    { "name": "Chapunza, Anotida Marrian", "affiliation": "Place Alert Labs, Midlands State University, Gweru, Zimbabwe" },
+    { "name": "Mushore, Terence Darlington", "affiliation": "Place Alert Labs, Midlands State University, Gweru, Zimbabwe" },
+    { "name": "Govindasamy, Tamara Rosemary", "affiliation": "IBM Research South Africa, Johannesburg, South Africa" }
+  ],
+  "grants": [
+    { "id": "10.13039/100000066::U01ES036146" },
+    { "id": "10.13039/100000061::U54TW012083" },
+    { "id": "10.13039/100014013::MR/P027938/1" }
+  ],
+  "related_identifiers": [
+    { "identifier": "10.1136/bmjopen-2024-091831", "relation": "isSupplementTo", "scheme": "doi" },
+    { "identifier": "10.1007/s11869-026-02060-y", "relation": "isSupplementTo", "scheme": "doi" }
+  ]
+}

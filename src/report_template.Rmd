@@ -1,0 +1,588 @@
+---
+title: "SPECTRA Comprehensive Analysis Report"
+subtitle: "Spatiotemporal Personal Exposure Characterization and TRAjectory Analyzer — CHEAQI-MNCH"
+date: "`r format(Sys.time(), '%B %d, %Y at %H:%M')`"
+output:
+  html_document:
+    theme: flatly
+    toc: true
+    toc_float:
+      collapsed: false
+    toc_depth: 3
+    self_contained: true
+    fig_width: 10
+    fig_height: 5
+params:
+  data_path: NULL
+---
+<!--
+  SPECTRA: Spatiotemporal Personal Exposure Characterization and TRAjectory
+  Analyzer.
+  Analysis report template.
+
+  Copyright (c) 2026 Place Alert Labs, Midlands State University.
+  All rights reserved. See LICENSE and NOTICE in the repository root.
+
+  Author and lead developer: Handsome Bongani Nyoni.
+  Disclosed to the Research and Innovation Hub, Midlands State University,
+  on 17 September 2026 (SPECTRA IP Disclosure).
+
+  Proprietary and confidential. No part of this file may be used, copied,
+  modified or distributed without the written permission of the copyright
+  holder. Academic use by request.
+-->
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE,
+                      fig.align = "center", out.width = "100%")
+library(data.table)
+library(ggplot2)
+library(viridis)
+library(scales)
+library(knitr)
+
+result   <- readRDS(params$data_path)
+dt       <- as.data.table(result$points_classified)
+stats    <- result$stats
+pd       <- as.data.table(result$person_day)
+pdc      <- as.data.table(result$person_day_cell)
+val_stats <- result$validation_stats
+
+# Default exposure variable
+pol_col   <- if ("pm25" %in% names(dt)) "pm25" else if ("no2" %in% names(dt)) "no2" else NULL
+pol_label <- if (!is.null(pol_col)) (if (pol_col == "pm25") "PM2.5" else "NO2") else "Exposure Var"
+pol_unit  <- if (!is.null(pol_col)) (if (pol_col == "pm25") "\u00b5g/m\u00b3" else "ppb") else ""
+
+# Shared theme
+theme_apex <- theme_minimal(base_size = 12) +
+  theme(
+    plot.title    = element_text(face = "bold", size = 14, colour = "#1e3c72"),
+    plot.subtitle = element_text(colour = "#666"),
+    axis.title    = element_text(colour = "#444"),
+    legend.position = "bottom",
+    panel.grid.minor = element_blank()
+  )
+```
+
+---
+
+# Executive Summary
+
+```{r exec-summary}
+n_pts     <- stats$n_points_classified
+n_people  <- stats$n_people
+n_days    <- stats$n_days
+n_indoor  <- stats$n_indoor_pred
+n_outdoor <- stats$n_outdoor_pred
+indoor_pct <- round(n_indoor / n_pts * 100, 1)
+total_hrs  <- round(sum(dt$dwell_min, na.rm = TRUE) / 60, 1)
+
+summary_tbl <- data.frame(
+  Metric = c("Total GPS Points", "Unique Participants", "Study Days",
+             "Indoor Points", "Outdoor Points", "Indoor Fraction",
+             "Total Monitored Hours"),
+  Value = c(
+    format(n_pts,     big.mark = ","),
+    format(n_people,  big.mark = ","),
+    format(n_days,    big.mark = ","),
+    paste0(format(n_indoor,  big.mark = ","), "  (", indoor_pct, "%)"),
+    paste0(format(n_outdoor, big.mark = ","), "  (", round(100 - indoor_pct, 1), "%)"),
+    paste0(indoor_pct, "%"),
+    format(total_hrs, big.mark = ",")
+  )
+)
+kable(summary_tbl, col.names = c("Metric", "Value"), align = c("l", "r"))
+```
+
+---
+
+# 1. Indoor / Outdoor Classification
+
+## 1.1 Overall Distribution
+
+```{r io-pie, fig.height=5}
+counts <- data.frame(
+  Category = c("Indoor", "Outdoor"),
+  N = c(n_indoor, n_outdoor)
+)
+counts$pct <- round(counts$N / sum(counts$N) * 100, 1)
+counts$label <- paste0(counts$Category, "\n", format(counts$N, big.mark = ","),
+                        " (", counts$pct, "%)")
+
+ggplot(counts, aes(x = 2, y = N, fill = Category)) +
+  geom_col(width = 1, colour = "white") +
+  coord_polar("y", start = 0) +
+  xlim(0.5, 2.5) +
+  scale_fill_manual(values = c("Indoor" = "#2a5298", "Outdoor" = "#4a90e2")) +
+  geom_text(aes(label = label), position = position_stack(vjust = 0.5),
+            colour = "white", fontface = "bold", size = 4.5) +
+  labs(title = "Indoor / Outdoor Distribution (All Points)") +
+  theme_void() +
+  theme(plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
+        legend.position = "none")
+```
+
+## 1.2 Per-Participant Dwell Time (Top 20)
+
+```{r dwell-bar-pp}
+dwell_pp <- dt[, .(
+  Total_Hours = sum(dwell_min, na.rm = TRUE) / 60,
+  Indoor_Pct  = sum(dwell_min[is_indoor == TRUE], na.rm = TRUE) /
+                  sum(dwell_min, na.rm = TRUE) * 100
+), by = PID]
+setorder(dwell_pp, -Total_Hours)
+top20 <- dwell_pp[1:min(20, .N)]
+top20[, PID := factor(PID, levels = PID)]
+
+ggplot(top20, aes(x = PID, y = Total_Hours, fill = Indoor_Pct)) +
+  geom_col() +
+  scale_fill_viridis_c(name = "Indoor %", option = "D") +
+  labs(title = "Top 20 Participants by Total Monitored Hours",
+       x = "Participant ID", y = "Total Hours") +
+  theme_apex +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+## 1.3 Daily Indoor / Outdoor Trend
+
+```{r daily-trend}
+if (all(c("corrected_class", "date") %in% names(dt))) {
+  daily <- dt[, .(
+    Indoor  = sum(corrected_class == "Indoor"),
+    Outdoor = sum(corrected_class == "Outdoor")
+  ), by = .(Day = as.Date(date))]
+  daily[, Indoor_pct  := round(Indoor  / (Indoor + Outdoor) * 100, 1)]
+  daily[, Outdoor_pct := 100 - Indoor_pct]
+  daily_long <- melt(daily, id.vars = "Day",
+                     measure.vars = c("Indoor_pct", "Outdoor_pct"),
+                     variable.name = "Type", value.name = "Pct")
+  daily_long[, Type := fifelse(Type == "Indoor_pct", "Indoor", "Outdoor")]
+
+  ggplot(daily_long, aes(x = Day, y = Pct, colour = Type, group = Type)) +
+    geom_line(size = 1) +
+    geom_point(size = 1.5) +
+    scale_colour_manual(values = c("Indoor" = "#1b9e77", "Outdoor" = "#d95f02"), name = NULL) +
+    scale_y_continuous(limits = c(0, 100)) +
+    labs(title = "Daily Indoor / Outdoor Percentage", x = "Date", y = "Percentage (%)") +
+    theme_apex
+}
+```
+
+---
+
+# 2. Dwell Time Distribution
+
+```{r dwell-hist}
+dt[, env_label := ifelse(is_indoor, "Indoor", "Outdoor")]
+
+ggplot(dt, aes(x = dwell_min, fill = env_label)) +
+  geom_histogram(bins = 40, alpha = 0.75, position = "identity") +
+  scale_fill_manual(values = c("Indoor" = "#2a5298", "Outdoor" = "#4a90e2"), name = NULL) +
+  labs(title = "Dwell Time Distribution",
+       x = "Dwell Time (minutes)", y = "Frequency") +
+  theme_apex
+```
+
+---
+
+# 3. Validation Pipeline
+
+## 3.1 Pipeline Statistics
+
+```{r val-stats-table}
+if (!is.null(val_stats) && nrow(val_stats) > 0) {
+  kable(val_stats)
+}
+```
+
+## 3.2 Speed vs OSM Confusion Matrix
+
+```{r val-confusion}
+if (all(c("speed_class", "osm_label") %in% names(dt))) {
+  dt_v <- dt[!is.na(osm_label)]
+  if (nrow(dt_v) > 0) {
+    cm <- as.data.frame(table(Speed = dt_v$speed_class, OSM = dt_v$osm_label))
+    cm$pct <- round(cm$Freq / sum(cm$Freq) * 100, 1)
+    cm$cell_label <- paste0(cm$Freq, "\n(", cm$pct, "%)")
+
+    ggplot(cm, aes(x = OSM, y = Speed, fill = Freq)) +
+      geom_tile(colour = "white", size = 1) +
+      geom_text(aes(label = cell_label), colour = "white", fontface = "bold", size = 5) +
+      scale_fill_gradient(low = "#d0e4f7", high = "#2a5298", name = "Count") +
+      labs(title = "Speed-Based vs OSM Classification",
+           x = "OSM Label", y = "Speed Classification") +
+      theme_apex +
+      theme(legend.position = "right")
+  }
+}
+```
+
+## 3.3 Misclassification Breakdown
+
+```{r misclass-pie, fig.height=5}
+if ("misclass_type" %in% names(dt)) {
+  dt_v <- dt[!is.na(misclass_type)]
+  if (nrow(dt_v) > 0) {
+    counts <- dt_v[, .N, by = misclass_type]
+    counts[, pct := round(N / sum(N) * 100, 1)]
+    counts[, label := paste0(misclass_type, "\n", format(N, big.mark = ","),
+                              " (", pct, "%)")]
+
+    ggplot(counts, aes(x = 2, y = N, fill = misclass_type)) +
+      geom_col(width = 1, colour = "white") +
+      coord_polar("y") + xlim(0.5, 2.5) +
+      scale_fill_manual(
+        values = c("Correct" = "#2ecc71", "False Indoor" = "#e67e22",
+                   "False Outdoor" = "#9b59b6"),
+        name = NULL) +
+      geom_text(aes(label = label), position = position_stack(vjust = 0.5),
+                colour = "white", fontface = "bold", size = 3.5) +
+      labs(title = "Misclassification Breakdown") +
+      theme_void() +
+      theme(plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
+            legend.position = "none")
+  }
+}
+```
+
+## 3.4 Speed-Only vs Corrected Classification
+
+```{r methods-comparison}
+if (all(c("speed_class", "corrected_class") %in% names(dt))) {
+  comparison <- data.frame(
+    Method = rep(c("Speed-Only", "Corrected\n(Speed+OSM)"), each = 2),
+    Class  = rep(c("Indoor", "Outdoor"), 2),
+    Count  = c(sum(dt$speed_class == "Indoor"),    sum(dt$speed_class == "Outdoor"),
+               sum(dt$corrected_class == "Indoor"), sum(dt$corrected_class == "Outdoor"))
+  )
+
+  ggplot(comparison, aes(x = Method, y = Count, fill = Class)) +
+    geom_col(position = "dodge") +
+    geom_text(aes(label = format(Count, big.mark = ",")),
+              position = position_dodge(width = 0.9), vjust = -0.4, size = 3.5) +
+    scale_fill_manual(values = c("Indoor" = "#2a5298", "Outdoor" = "#e67e22"), name = NULL) +
+    labs(title = "Speed-Only vs Corrected Classification",
+         x = NULL, y = "Number of Points") +
+    theme_apex
+}
+```
+
+---
+
+# 4. Temporal & Mobility Patterns
+
+## 4.1 Exposure by Time of Day
+
+```{r temporal-pattern}
+if (!is.null(pol_col) &&
+    all(c("temporal_theme", "corrected_class", pol_col) %in% names(dt))) {
+  agg <- dt[!is.na(get(pol_col)), .(
+    mean_exp = round(mean(get(pol_col), na.rm = TRUE), 2),
+    n = .N
+  ), by = .(temporal_theme, exposure_type = corrected_class)]
+
+  ggplot(agg, aes(x = temporal_theme, y = mean_exp, fill = exposure_type)) +
+    geom_col(position = "dodge") +
+    geom_text(aes(label = mean_exp),
+              position = position_dodge(width = 0.9), vjust = -0.4, size = 3) +
+    scale_fill_manual(values = c("Indoor" = "#1b9e77", "Outdoor" = "#d95f02"), name = NULL) +
+    labs(title = paste(pol_label, "Exposure by Time of Day"),
+         x = NULL, y = paste0("Mean ", pol_label, " (", pol_unit, ")")) +
+    theme_apex
+}
+```
+
+## 4.2 Exposure by Mobility Theme
+
+```{r mobility-theme}
+if (!is.null(pol_col) &&
+    all(c("mobility_theme", "corrected_class", pol_col) %in% names(dt))) {
+  agg <- dt[!is.na(mobility_theme) & !is.na(get(pol_col)), .(
+    mean_exp = round(mean(get(pol_col), na.rm = TRUE), 2),
+    sd_exp   = round(sd(get(pol_col), na.rm = TRUE), 2),
+    n = .N
+  ), by = .(mobility_theme, exposure_type = corrected_class)]
+
+  ggplot(agg, aes(x = mobility_theme, y = mean_exp, fill = exposure_type)) +
+    geom_col(position = "dodge") +
+    geom_errorbar(aes(ymin = pmax(0, mean_exp - sd_exp), ymax = mean_exp + sd_exp),
+                  position = position_dodge(width = 0.9), width = 0.25) +
+    scale_fill_manual(values = c("Indoor" = "#1b9e77", "Outdoor" = "#d95f02"), name = NULL) +
+    labs(title = paste(pol_label, "Exposure by Mobility Theme"),
+         subtitle = "Error bars = \u00b11 SD",
+         x = NULL, y = paste0("Mean ", pol_label, " (", pol_unit, ")")) +
+    theme_apex
+}
+```
+
+## 4.3 Weekday \u00d7 Time-of-Day Heatmap
+
+```{r weekday-heatmap, fig.height=5}
+if (!is.null(pol_col) &&
+    all(c("weekday_name", "temporal_theme", pol_col) %in% names(dt))) {
+  agg <- dt[!is.na(get(pol_col)), .(
+    mean_exp = round(mean(get(pol_col), na.rm = TRUE), 2)
+  ), by = .(weekday_name, temporal_theme)]
+
+  day_order  <- c("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday")
+  time_order <- c("Night (0-4h)","Morning (5-11h)","Afternoon (12-16h)","Evening (17-23h)")
+  agg[, weekday_name  := factor(weekday_name,  levels = day_order)]
+  agg[, temporal_theme := factor(temporal_theme, levels = time_order)]
+
+  ggplot(agg, aes(x = temporal_theme, y = weekday_name, fill = mean_exp)) +
+    geom_tile(colour = "white") +
+    geom_text(aes(label = round(mean_exp, 1)), size = 3.5) +
+    scale_fill_gradient(low = "#fff7bc", high = "#d73027",
+                        name = paste0("Mean\n", pol_label)) +
+    scale_y_discrete(limits = rev(day_order)) +
+    labs(title = paste("Weekday \u00d7 Time-of-Day Mean", pol_label, "Exposure"),
+         x = NULL, y = NULL) +
+    theme_apex +
+    theme(axis.text.x = element_text(angle = 30, hjust = 1), legend.position = "right")
+}
+```
+
+## 4.4 Exposure by Dwell Duration
+
+```{r duration-theme}
+if (!is.null(pol_col) &&
+    all(c("duration_theme", "corrected_class", pol_col) %in% names(dt))) {
+  agg <- dt[!is.na(duration_theme) & !is.na(get(pol_col)), .(
+    mean_exp = round(mean(get(pol_col), na.rm = TRUE), 2),
+    n = .N
+  ), by = .(duration_theme, exposure_type = corrected_class)]
+
+  ggplot(agg, aes(x = duration_theme, y = mean_exp, fill = exposure_type)) +
+    geom_col(position = "dodge") +
+    geom_text(aes(label = mean_exp),
+              position = position_dodge(width = 0.9), vjust = -0.4, size = 3) +
+    scale_fill_manual(values = c("Indoor" = "#1b9e77", "Outdoor" = "#d95f02"), name = NULL) +
+    labs(title = paste(pol_label, "Exposure by Dwell Duration"),
+         x = NULL, y = paste0("Mean ", pol_label, " (", pol_unit, ")")) +
+    theme_apex
+}
+```
+
+## 4.5 24-Hour Exposure Profile
+
+```{r hourly-profile}
+if (!is.null(pol_col) &&
+    all(c("hour_local", "corrected_class", pol_col) %in% names(dt))) {
+  hourly <- dt[!is.na(get(pol_col)), .(
+    mean_exp = round(mean(get(pol_col), na.rm = TRUE), 2),
+    p25 = quantile(get(pol_col), 0.25, na.rm = TRUE),
+    p75 = quantile(get(pol_col), 0.75, na.rm = TRUE)
+  ), by = .(hour = hour_local, exposure_type = corrected_class)]
+
+  ggplot(hourly, aes(x = hour, y = mean_exp,
+                     colour = exposure_type, fill = exposure_type)) +
+    geom_ribbon(aes(ymin = p25, ymax = p75), alpha = 0.15, colour = NA) +
+    geom_line(size = 1) +
+    geom_point(size = 2) +
+    scale_colour_manual(values = c("Indoor" = "#1b9e77", "Outdoor" = "#d95f02"), name = NULL) +
+    scale_fill_manual(  values = c("Indoor" = "#1b9e77", "Outdoor" = "#d95f02"), name = NULL) +
+    scale_x_continuous(breaks = 0:23) +
+    labs(title = paste("24-Hour", pol_label, "Exposure Profile"),
+         subtitle = "Shaded band = IQR (25th\u201375th percentile)",
+         x = "Hour of Day", y = paste0("Mean ", pol_label, " (", pol_unit, ")")) +
+    theme_apex
+}
+```
+
+## 4.6 Peak Exposure Hours
+
+```{r peak-hours}
+if (!is.null(pol_col) && all(c("hour_local", pol_col) %in% names(dt))) {
+  hourly <- dt[!is.na(get(pol_col)), .(
+    mean_exp = round(mean(get(pol_col), na.rm = TRUE), 2)
+  ), by = .(hour = hour_local)]
+  setorder(hourly, -mean_exp)
+  hourly[, rank := seq_len(.N)]
+  setorder(hourly, hour)
+
+  ggplot(hourly, aes(x = factor(hour), y = mean_exp,
+                     fill = ifelse(rank <= 5, "Top 5", "Other"))) +
+    geom_col() +
+    geom_text(aes(label = mean_exp), vjust = -0.4, size = 3) +
+    scale_fill_manual(values = c("Top 5" = "#e74c3c", "Other" = "#3498db"), name = NULL) +
+    labs(title = paste("Peak", pol_label, "Exposure Hours (Top 5 in red)"),
+         x = "Hour of Day", y = paste0("Mean ", pol_label, " (", pol_unit, ")")) +
+    theme_apex
+}
+```
+
+---
+
+# 5. Climate Analysis
+
+## 5.1 Exposure by Climate Condition
+
+```{r climate-exposure}
+if (!is.null(pol_col) &&
+    all(c("climate_theme", "corrected_class", pol_col) %in% names(dt))) {
+  dt_v <- dt[!is.na(get(pol_col)) & climate_theme != "Unknown"]
+  if (nrow(dt_v) > 0) {
+    agg <- dt_v[, .(
+      mean_exp = round(mean(get(pol_col), na.rm = TRUE), 2),
+      n = .N
+    ), by = .(climate_theme, exposure_type = corrected_class)]
+
+    ggplot(agg, aes(x = climate_theme, y = mean_exp, fill = exposure_type)) +
+      geom_col(position = "dodge") +
+      scale_fill_manual(values = c("Indoor" = "#1b9e77", "Outdoor" = "#d95f02"), name = NULL) +
+      labs(title = paste(pol_label, "Exposure by Climate Condition"),
+           x = NULL, y = paste0("Mean ", pol_label, " (", pol_unit, ")")) +
+      theme_apex +
+      theme(axis.text.x = element_text(angle = 30, hjust = 1))
+  } else {
+    cat("*No climate data available — map Temperature and Humidity fields to enable this section.*")
+  }
+}
+```
+
+## 5.2 Mean Exposure by Climate Theme
+
+```{r climate-pie, fig.height=5}
+if (!is.null(pol_col) && "climate_theme" %in% names(dt)) {
+  agg <- dt[!is.na(get(pol_col)) & climate_theme != "Unknown",
+            .(mean_exp = round(mean(get(pol_col), na.rm = TRUE), 2)),
+            by = climate_theme]
+  if (nrow(agg) > 0) {
+    agg[, label := paste0(climate_theme, "\n", mean_exp, " ", pol_unit)]
+
+    ggplot(agg, aes(x = 2, y = mean_exp, fill = climate_theme)) +
+      geom_col(width = 1, colour = "white") +
+      coord_polar("y") + xlim(0.5, 2.5) +
+      scale_fill_manual(values = c("#91bfdb","#fee090","#5ab4ac","#d8b365")[
+        seq_len(nrow(agg))], name = NULL) +
+      geom_text(aes(label = label), position = position_stack(vjust = 0.5),
+                size = 3.5, colour = "white", fontface = "bold") +
+      labs(title = paste("Mean", pol_label, "by Climate Theme")) +
+      theme_void() +
+      theme(plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
+            legend.position = "none")
+  }
+}
+```
+
+---
+
+# 6. Outdoor Analysis
+
+## 6.1 Outdoor Movement Intensity
+
+```{r outdoor-movement}
+if (all(c("outdoor_movement_type", "corrected_class") %in% names(dt))) {
+  outdoor <- dt[corrected_class == "Outdoor" & !is.na(outdoor_movement_type)]
+  if (nrow(outdoor) > 0) {
+    counts <- outdoor[, .(N = .N), by = outdoor_movement_type]
+    counts[, pct := round(N / sum(N) * 100, 1)]
+
+    ggplot(counts, aes(x = outdoor_movement_type, y = N, fill = outdoor_movement_type)) +
+      geom_col() +
+      geom_text(aes(label = paste0(format(N, big.mark = ","), "\n(", pct, "%)")),
+                vjust = -0.3, size = 3.5) +
+      scale_fill_manual(values = setNames(c("#fee5d9","#fcae91","#fb6a4a"),
+                                           counts$outdoor_movement_type),
+                        name = NULL) +
+      labs(title = "Outdoor Movement Intensity", x = NULL, y = "Number of Points") +
+      theme_apex + theme(legend.position = "none")
+  }
+}
+```
+
+## 6.2 Outdoor Exposure Context
+
+```{r outdoor-context}
+if (all(c("outdoor_context", "corrected_class") %in% names(dt))) {
+  outdoor <- dt[corrected_class == "Outdoor" & !is.na(outdoor_context)]
+  if (nrow(outdoor) > 0) {
+    counts <- outdoor[, .(N = .N), by = outdoor_context]
+    counts[, pct := round(N / sum(N) * 100, 1)]
+
+    ggplot(counts, aes(y = reorder(outdoor_context, N), x = N, fill = outdoor_context)) +
+      geom_col() +
+      geom_text(aes(label = paste0(format(N, big.mark = ","), " (", pct, "%)")),
+                hjust = -0.1, size = 3.5) +
+      scale_fill_viridis_d(name = NULL) +
+      scale_x_continuous(expand = expansion(mult = c(0, 0.2))) +
+      labs(title = "Outdoor Exposure Context", x = "Number of Points", y = NULL) +
+      theme_apex + theme(legend.position = "none")
+  }
+}
+```
+
+## 6.3 Outdoor Environmental Stress
+
+```{r outdoor-stress}
+if (all(c("outdoor_stress_level", "corrected_class") %in% names(dt))) {
+  outdoor <- dt[corrected_class == "Outdoor" &
+                  !is.na(outdoor_stress_level) &
+                  outdoor_stress_level != "Unknown Stress"]
+  if (nrow(outdoor) > 0) {
+    counts <- outdoor[, .(N = .N), by = outdoor_stress_level]
+    counts[, pct := round(N / sum(N) * 100, 1)]
+    stress_colors <- c("Low Stress" = "#91bfdb",
+                        "Moderate Stress" = "#ffffbf",
+                        "High Stress" = "#fc8d59")
+
+    ggplot(counts, aes(x = outdoor_stress_level, y = N, fill = outdoor_stress_level)) +
+      geom_col() +
+      geom_text(aes(label = paste0(format(N, big.mark = ","), "\n(", pct, "%)")),
+                vjust = -0.3, size = 3.5) +
+      scale_fill_manual(values = stress_colors, name = NULL) +
+      labs(title = "Outdoor Environmental Stress Levels", x = NULL, y = "Number of Points") +
+      theme_apex + theme(legend.position = "none")
+  } else {
+    cat("*No stress data available — map Temperature and Humidity fields to enable this section.*")
+  }
+}
+```
+
+---
+
+# 7. Daily Summaries
+
+```{r daily-table}
+display_pd <- copy(pd)
+if ("total_dwell_min" %in% names(display_pd))
+  display_pd[, total_dwell_hours := round(total_dwell_min / 60, 2)]
+if ("pm25_mean"   %in% names(display_pd)) display_pd[, pm25_mean  := round(pm25_mean, 2)]
+if ("no2_mean"    %in% names(display_pd)) display_pd[, no2_mean   := round(no2_mean, 2)]
+if ("indoor_pct"  %in% names(display_pd)) display_pd[, indoor_pct := round(indoor_pct, 1)]
+
+kable(head(display_pd, 100), format.args = list(big.mark = ","), digits = 2,
+      caption = paste("Showing first", min(100, nrow(display_pd)),
+                      "of", nrow(display_pd), "rows"))
+```
+
+---
+
+# 8. Grid Cell Summary
+
+```{r grid-summary}
+grid_agg <- data.frame(
+  Metric = c("Total Grid Cells", "Total Dwell Time (min)", "Mean Indoor %"),
+  Value  = c(
+    format(nrow(pdc), big.mark = ","),
+    format(round(sum(pdc$dwell_sum_min, na.rm = TRUE), 0), big.mark = ","),
+    paste0(round(mean(pdc$indoor_pct, na.rm = TRUE), 1), "%")
+  )
+)
+if ("pm25_mean_tw" %in% names(pdc))
+  grid_agg <- rbind(grid_agg, data.frame(
+    Metric = "Mean PM2.5 (time-weighted)",
+    Value  = round(mean(pdc$pm25_mean_tw, na.rm = TRUE), 2)
+  ))
+if ("no2_mean_tw" %in% names(pdc))
+  grid_agg <- rbind(grid_agg, data.frame(
+    Metric = "Mean NO2 (time-weighted)",
+    Value  = round(mean(pdc$no2_mean_tw, na.rm = TRUE), 2)
+  ))
+
+kable(grid_agg, col.names = c("Metric", "Value"), align = c("l", "r"))
+```
+
+---
+
+*Report generated by **SPECTRA** (Spatiotemporal Personal Exposure Characterization and TRAjectory Analyzer) — CHEAQI-MNCH*

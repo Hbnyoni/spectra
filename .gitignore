@@ -1,0 +1,13 @@
+# Data, caches and credentials never enter this repository.
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.db
+*.log
+.Renviron
+.env
+__pycache__/
+.Rproj.user/
+.Rhistory
+results/
+data/

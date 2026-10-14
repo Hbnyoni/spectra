@@ -1,0 +1,45 @@
+cff-version: 1.2.0
+message: "If you use SPECTRA, please cite both the software and the software paper."
+title: "SPECTRA: Spatiotemporal Personal Exposure Characterization and TRAjectory Analyzer"
+abstract: >-
+  An R toolkit that converts a raw wearable record, one position and one
+  concentration per minute, into a dwell-weighted, microenvironment-resolved
+  exposure estimate for each person, day and 100 m cell.
+type: software
+version: "1.0"
+date-released: "2026-10-14"
+license: GPL-3.0-or-later
+repository-code: "https://github.com/hbnyoni/spectra"
+keywords:
+  - personal exposure
+  - PM2.5
+  - trajectory segmentation
+  - dwell-time weighting
+  - building footprints
+  - R
+authors:
+  - family-names: Nyoni
+    given-names: Handsome Bongani
+    affiliation: "Place Alert Labs, Midlands State University, Gweru, Zimbabwe"
+    email: nyonih@staff.msu.ac.zw
+  - family-names: Sibanda
+    given-names: Rutendo
+    affiliation: "Centre for Sexual Health and HIV/AIDS Research (CeSHHAR) Zimbabwe, Harare, Zimbabwe"
+  - family-names: Chinwadzimba
+    given-names: Zororo
+    affiliation: "Centre for Sexual Health and HIV/AIDS Research (CeSHHAR) Zimbabwe, Harare, Zimbabwe"
+  - family-names: Shangwa
+    given-names: Tendai
+    affiliation: "Place Alert Labs, Midlands State University, Gweru, Zimbabwe"
+  - family-names: Makanga
+    given-names: Prestige Tatenda
+    affiliation: "Place Alert Labs, Midlands State University, Gweru, Zimbabwe"
+  - family-names: Chapunza
+    given-names: Anotida Marrian
+    affiliation: "Place Alert Labs, Midlands State University, Gweru, Zimbabwe"
+  - family-names: Mushore
+    given-names: Terence Darlington
+    affiliation: "Place Alert Labs, Midlands State University, Gweru, Zimbabwe"
+  - family-names: Govindasamy
+    given-names: Tamara Rosemary
+    affiliation: "IBM Research South Africa, Johannesburg, South Africa"
